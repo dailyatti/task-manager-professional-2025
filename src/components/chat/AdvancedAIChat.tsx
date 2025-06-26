@@ -7,7 +7,6 @@ import {
   Trash2, 
   Download, 
   Settings,
-  MessageSquare,
   Loader2,
   AlertCircle,
   CheckCircle,
@@ -19,12 +18,10 @@ import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { useTranslation } from '../../utils/translations';
 import type { Task, AIConfig, TaskData } from '../../types';
-import { createSmartTaskFromAI } from '../../utils/aiChatUtils';
 import { 
   TaskManagementSystem, 
   validateAPIConfiguration, 
   generateFeedbackMessage,
-  type TaskDeletionResult,
   type APIValidationResult
 } from '../../utils/taskManagement';
 
@@ -275,7 +272,7 @@ export function AdvancedAIChat({
         }
 
         const data = await response.json();
-        let aiContent = data.choices && data.choices.length > 0 ? data.choices[0].message.content : '';
+        const aiContent = data.choices && data.choices.length > 0 ? data.choices[0].message.content : '';
 
         // Enhanced task detection and creation
         const taskMatch = aiContent.match(/(?:Feladat|Task):(.+?)(?:\n|$)/i);
@@ -289,7 +286,7 @@ export function AdvancedAIChat({
             text: taskText,
             time: '',
             completed: false,
-            priority: priorityMatch ? priorityMatch[1] as any : 'medium',
+            priority: priorityMatch ? (priorityMatch[1] as 'low' | 'medium' | 'high') : 'medium',
             subtasks: [],
             collapsed: true,
             color: '#ffffff',
@@ -374,47 +371,47 @@ export function AdvancedAIChat({
   ];
 
   return (
-    <div className="flex flex-col h-full bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700">
+    <div className="flex flex-col h-full bg-white dark:bg-gray-800 rounded-xl sm:rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 max-h-[600px] sm:max-h-none xl:mobile-chat-full">
       {/* Header */}
-      <div className="flex items-center justify-between p-4 border-b border-gray-200 dark:border-gray-700">
+      <div className="flex items-center justify-between p-3 sm:p-4 border-b border-gray-200 dark:border-gray-700 flex-shrink-0">
         <div className="flex items-center space-x-2">
-          <Bot className="w-6 h-6 text-primary-600" />
-          <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
+          <Bot className="w-5 h-5 sm:w-6 sm:h-6 text-primary-600" />
+          <h2 className="text-base sm:text-lg font-semibold text-gray-900 dark:text-white">
             {t('aiAssistant')}
           </h2>
           {validationResult?.isValid && (
-            <CheckCircle className="w-4 h-4 text-green-500" />
+            <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 text-green-500" />
           )}
         </div>
         
-        <div className="flex items-center space-x-2">
+        <div className="flex items-center space-x-1 sm:space-x-2">
           <Button
             variant="ghost"
             size="sm"
             onClick={() => setShowSettings(!showSettings)}
-            className="p-2"
+            className="p-1.5 sm:p-2"
           >
-            <Settings className="w-4 h-4" />
+            <Settings className="w-3 h-3 sm:w-4 sm:h-4" />
           </Button>
           
           <Button
             variant="ghost"
             size="sm"
             onClick={exportChat}
-            className="p-2"
+            className="p-1.5 sm:p-2 hidden sm:block"
             title={t('exportChat')}
           >
-            <Download className="w-4 h-4" />
+            <Download className="w-3 h-3 sm:w-4 sm:h-4" />
           </Button>
           
           <Button
             variant="ghost"
             size="sm"
             onClick={clearChat}
-            className="p-2 text-error-600 hover:text-error-700"
+            className="p-1.5 sm:p-2 text-error-600 hover:text-error-700"
             title={t('clearChat')}
           >
-            <Trash2 className="w-4 h-4" />
+            <Trash2 className="w-3 h-3 sm:w-4 sm:h-4" />
           </Button>
         </div>
       </div>
@@ -426,17 +423,17 @@ export function AdvancedAIChat({
             initial={{ height: 0, opacity: 0 }}
             animate={{ height: 'auto', opacity: 1 }}
             exit={{ height: 0, opacity: 0 }}
-            className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700"
+            className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700 flex-shrink-0"
           >
-            <div className="p-4 space-y-4">
+            <div className="p-3 sm:p-4 space-y-3 sm:space-y-4">
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   {t('aiModel')}
                 </label>
                 <select
                   value={modelInput}
                   onChange={(e) => setModelInput(e.target.value)}
-                  className="w-full px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white"
+                  className="w-full px-2 sm:px-3 py-1.5 sm:py-2 border border-gray-300 dark:border-gray-600 rounded-md bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm"
                 >
                   <option value="gpt-4o">GPT-4o</option>
                   <option value="gpt-4o-mini">GPT-4o Mini</option>
@@ -444,30 +441,31 @@ export function AdvancedAIChat({
               </div>
               
               <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
+                <label className="block text-xs sm:text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   {t('apiKey')}
                 </label>
-                <div className="flex space-x-2">
+                <div className="flex space-x-1 sm:space-x-2">
                   <Input
                     type="password"
                     value={apiKeyInput}
                     onChange={(e) => setApiKeyInput(e.target.value)}
                     placeholder={t('enterApiKey')}
-                    className="flex-1"
+                    className="flex-1 text-sm"
                   />
                   <Button
                     variant="outline"
                     size="sm"
                     onClick={handleValidateAPI}
                     disabled={isValidating || !apiKeyInput}
-                    className="min-w-[100px]"
+                    className="min-w-[80px] sm:min-w-[100px] text-xs sm:text-sm"
                   >
                     {isValidating ? (
-                      <Loader2 className="w-4 h-4 animate-spin" />
+                      <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 animate-spin" />
                     ) : (
                       <>
-                        <Shield className="w-4 h-4 mr-1" />
-                        {t('validate')}
+                        <Shield className="w-3 h-3 sm:w-4 sm:h-4 mr-1" />
+                        <span className="hidden sm:inline">{t('validate')}</span>
+                        <span className="sm:hidden">OK</span>
                       </>
                     )}
                   </Button>
@@ -476,18 +474,18 @@ export function AdvancedAIChat({
 
               {/* Validation Result */}
               {validationResult && (
-                <div className={`p-3 rounded-lg border ${
+                <div className={`p-2 sm:p-3 rounded-lg border text-sm ${
                   validationResult.isValid 
                     ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' 
                     : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
                 }`}>
                   <div className="flex items-center space-x-2">
                     {validationResult.isValid ? (
-                      <CheckCircle className="w-4 h-4 text-green-500" />
+                      <CheckCircle className="w-3 h-3 sm:w-4 sm:h-4 text-green-500" />
                     ) : (
-                      <AlertCircle className="w-4 h-4 text-red-500" />
+                      <AlertCircle className="w-3 h-3 sm:w-4 sm:h-4 text-red-500" />
                     )}
-                    <span className={`text-sm ${
+                    <span className={`text-xs sm:text-sm ${
                       validationResult.isValid 
                         ? 'text-green-700 dark:text-green-300' 
                         : 'text-red-700 dark:text-red-300'
@@ -499,34 +497,52 @@ export function AdvancedAIChat({
                   </div>
                 </div>
               )}
-
-              {/* Quick Actions */}
-              <div>
-                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
-                  {t('quickActions')}
-                </label>
-                <div className="flex gap-2">
-                  {quickActions.map((action, index) => (
-                    <Button
-                      key={index}
-                      variant={action.variant}
-                      size="sm"
-                      onClick={action.action}
-                      className="flex items-center space-x-1"
-                    >
-                      <action.icon className="w-3 h-3" />
-                      <span className="text-xs">{action.label}</span>
-                    </Button>
-                  ))}
-                </div>
-              </div>
             </div>
           </motion.div>
         )}
       </AnimatePresence>
 
+      {/* Quick Actions - Mobile Optimized */}
+      {quickActions.length > 0 && (
+        <div className="p-2 sm:p-3 border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-800/50 flex-shrink-0">
+          <div className="flex gap-1 sm:gap-2 overflow-x-auto scrollbar-hide">
+            {quickActions.map((action, index) => {
+              const Icon = action.icon;
+              return (
+                <Button
+                  key={index}
+                  variant={action.variant === 'destructive' ? 'danger' : 'outline'}
+                  size="sm"
+                  onClick={action.action}
+                  className="flex items-center space-x-1 text-xs sm:text-sm whitespace-nowrap flex-shrink-0 px-2 sm:px-3"
+                >
+                  <Icon className="w-3 h-3 sm:w-4 sm:h-4" />
+                  <span className="hidden sm:inline">{action.label}</span>
+                </Button>
+              );
+            })}
+          </div>
+        </div>
+      )}
+
+      {/* Error Display */}
+      {error && (
+        <div className="p-2 sm:p-3 border-b border-gray-200 dark:border-gray-700 bg-red-50 dark:bg-red-900/20 flex-shrink-0">
+          <div className="flex items-center space-x-2">
+            <AlertCircle className="w-3 h-3 sm:w-4 sm:h-4 text-red-500" />
+            <span className="text-xs sm:text-sm text-red-700 dark:text-red-300">{error}</span>
+            <button
+              onClick={() => setError(null)}
+              className="ml-auto text-red-500 hover:text-red-700"
+            >
+              <X className="w-3 h-3 sm:w-4 sm:h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Messages */}
-      <div className="flex-1 overflow-y-auto p-4 space-y-4">
+      <div className="flex-1 overflow-y-auto p-2 sm:p-4 space-y-2 sm:space-y-4 min-h-0">
         <AnimatePresence>
           {messages.map((message) => (
             <motion.div
@@ -536,8 +552,8 @@ export function AdvancedAIChat({
               exit={{ opacity: 0, y: -20 }}
               className={`flex ${message.role === 'user' ? 'justify-end' : 'justify-start'}`}
             >
-              <div className={`flex items-start space-x-2 max-w-[80%] ${message.role === 'user' ? 'flex-row-reverse space-x-reverse' : ''}`}>
-                <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
+              <div className={`flex items-start space-x-1 sm:space-x-2 max-w-[85%] sm:max-w-[80%] ${message.role === 'user' ? 'flex-row-reverse space-x-reverse' : ''}`}>
+                <div className={`flex-shrink-0 w-6 h-6 sm:w-8 sm:h-8 rounded-full flex items-center justify-center ${
                   message.role === 'user' 
                     ? 'bg-primary-600 text-white' 
                     : message.role === 'system'
@@ -545,108 +561,85 @@ export function AdvancedAIChat({
                     : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300'
                 }`}>
                   {message.role === 'user' ? (
-                    <User className="w-4 h-4" />
+                    <User className="w-3 h-3 sm:w-4 sm:h-4" />
                   ) : message.role === 'system' ? (
-                    <Shield className="w-4 h-4" />
+                    <Shield className="w-3 h-3 sm:w-4 sm:h-4" />
                   ) : (
-                    <Bot className="w-4 h-4" />
+                    <Bot className="w-3 h-3 sm:w-4 sm:h-4" />
                   )}
                 </div>
                 
-                <div className={`flex-1 p-3 rounded-lg ${
+                <div className={`p-2 sm:p-3 rounded-lg border max-w-full ${
                   message.role === 'user'
-                    ? 'bg-primary-600 text-white'
-                    : message.role === 'system'
-                    ? message.type === 'success' 
-                      ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200'
-                      : message.type === 'error'
-                      ? 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200'
-                      : 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-200'
-                    : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white'
+                    ? 'bg-primary-100 dark:bg-primary-900/30 border-primary-200 dark:border-primary-800'
+                    : message.type === 'success'
+                    ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800'
+                    : message.type === 'error'
+                    ? 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+                    : 'bg-white dark:bg-gray-700 border-gray-200 dark:border-gray-600'
                 }`}>
                   {message.isLoading ? (
                     <div className="flex items-center space-x-2">
-                      <Loader2 className="w-4 h-4 animate-spin" />
-                      <span>{t('aiThinking')}</span>
+                      <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 animate-spin" />
+                                             <span className="text-xs sm:text-sm text-gray-600 dark:text-gray-400">
+                         Thinking...
+                       </span>
                     </div>
                   ) : (
-                    <div className="space-y-2">
-                      <p className="whitespace-pre-wrap">{message.content}</p>
-                      <div className="flex items-center justify-between text-xs opacity-70">
-                        <span>{message.timestamp.toLocaleTimeString()}</span>
-                        {message.role !== 'user' && message.id !== 'welcome' && (
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => deleteMessage(message.id)}
-                            className="p-1 h-auto text-xs opacity-50 hover:opacity-100"
-                          >
-                            <X className="w-3 h-3" />
-                          </Button>
-                        )}
-                      </div>
+                    <div className="text-xs sm:text-sm text-gray-900 dark:text-gray-100 whitespace-pre-wrap break-words">
+                      {message.content}
                     </div>
                   )}
+                  
+                  <div className="flex items-center justify-between mt-1 sm:mt-2">
+                    <span className="text-[10px] sm:text-xs text-gray-500 dark:text-gray-400">
+                      {message.timestamp.toLocaleTimeString()}
+                    </span>
+                    
+                    {!message.isLoading && (
+                      <button
+                        onClick={() => deleteMessage(message.id)}
+                        className="opacity-0 group-hover:opacity-100 text-gray-400 hover:text-red-500 transition-all"
+                      >
+                        <X className="w-2 h-2 sm:w-3 sm:h-3" />
+                      </button>
+                    )}
+                  </div>
                 </div>
               </div>
             </motion.div>
           ))}
         </AnimatePresence>
-        
         <div ref={messagesEndRef} />
       </div>
 
-      {/* Error Display */}
-      {error && (
-        <motion.div
-          initial={{ opacity: 0, y: 10 }}
-          animate={{ opacity: 1, y: 0 }}
-          className="mx-4 mb-4 p-3 bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-lg"
-        >
-          <div className="flex items-center space-x-2">
-            <AlertCircle className="w-4 h-4 text-red-500" />
-            <span className="text-sm text-red-700 dark:text-red-300">{error}</span>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => setError(null)}
-              className="p-1 h-auto ml-auto"
-            >
-              <X className="w-3 h-3" />
-            </Button>
-          </div>
-        </motion.div>
-      )}
-
       {/* Input */}
-      <div className="p-4 border-t border-gray-200 dark:border-gray-700">
-        <div className="flex space-x-2">
-          <Input
+      <div className="p-2 sm:p-4 border-t border-gray-200 dark:border-gray-700 flex-shrink-0">
+        <div className="flex space-x-1 sm:space-x-2">
+          <input
+            type="text"
             value={inputMessage}
             onChange={(e) => setInputMessage(e.target.value)}
             onKeyPress={handleKeyPress}
-            placeholder={t('chatPlaceholder')}
-            disabled={isLoading || !aiConfig.enabled}
-            className="flex-1"
+                         placeholder="Type a message..."
+            disabled={isLoading}
+            className="flex-1 px-3 py-2 border border-gray-300 dark:border-gray-600 rounded-lg bg-white dark:bg-gray-800 text-gray-900 dark:text-white placeholder-gray-500 dark:placeholder-gray-400 focus:outline-none focus:ring-2 focus:ring-primary-500 text-sm resize-none disabled:opacity-50"
           />
+          
           <Button
             onClick={handleSendMessage}
-            disabled={!inputMessage.trim() || isLoading || !aiConfig.enabled}
-            className="px-4"
+            disabled={!inputMessage.trim() || isLoading}
+            variant="primary"
+            size="sm"
+            className="px-3 sm:px-4 py-2"
           >
             {isLoading ? (
-              <Loader2 className="w-4 h-4 animate-spin" />
+              <Loader2 className="w-3 h-3 sm:w-4 sm:h-4 animate-spin" />
             ) : (
-              <Send className="w-4 h-4" />
+              <Send className="w-3 h-3 sm:w-4 sm:h-4" />
             )}
           </Button>
         </div>
-        
-        {!aiConfig.enabled && (
-          <p className="mt-2 text-xs text-gray-500 dark:text-gray-400 text-center">
-            {t('aiNotConfigured')}
-          </p>
-        )}
       </div>
     </div>
   );

@@ -438,8 +438,8 @@ function App() {
         />
       )}
 
-      <main className="flex-1 flex flex-col md:flex-row gap-4 p-4">
-        <section className="flex-1">
+      <main className="flex-1 flex flex-col xl:flex-row gap-2 sm:gap-4 p-2 sm:p-4">
+        <section className="flex-1 min-w-0">
           <AnimatePresence mode="wait">
             {showSettings ? (
               <motion.div
@@ -447,18 +447,18 @@ function App() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
-                className="space-y-8"
+                className="space-y-4 sm:space-y-8"
               >
-                <div className="text-center mb-8">
-                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                <div className="text-center mb-4 sm:mb-8">
+                  <h2 className="text-xl sm:text-2xl font-bold text-gray-900 dark:text-white mb-2">
                     {t('settings')} & {t('configuration')}
                   </h2>
-                  <p className="text-gray-600 dark:text-gray-400">
+                  <p className="text-sm sm:text-base text-gray-600 dark:text-gray-400">
                     {t('configureAiProviders')}
                   </p>
                 </div>
 
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-8">
                   <AIConfigPanel
                     config={aiConfig}
                     onSave={setAiConfig}
@@ -538,22 +538,22 @@ function App() {
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
-                className="space-y-8"
+                className="space-y-4 sm:space-y-8"
               >
                 {/* AI Error Display */}
                 {aiError && (
                   <motion.div
                     initial={{ opacity: 0, scale: 0.95 }}
                     animate={{ opacity: 1, scale: 1 }}
-                    className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4"
+                    className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-3 sm:p-4"
                   >
                     <div className="flex items-start space-x-3">
                       <div className="flex-shrink-0">
-                        <svg className="w-5 h-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                        <svg className="w-4 h-4 sm:w-5 sm:h-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
                           <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
                         </svg>
                       </div>
-                      <div className="flex-1">
+                      <div className="flex-1 min-w-0">
                         <h3 className="text-sm font-medium text-red-800 dark:text-red-200">
                           {t('aiError')}
                         </h3>
@@ -580,8 +580,8 @@ function App() {
                 )}
 
                 {/* Task Input Section */}
-                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
+                <div className="bg-white dark:bg-gray-800 rounded-xl sm:rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
+                  <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white mb-4 sm:mb-6">
                     {getTabTitle()}
                   </h2>
                   
@@ -598,12 +598,12 @@ function App() {
                 </div>
 
                 {/* Task List Section */}
-                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-                  <div className="flex items-center justify-between mb-6">
-                    <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                <div className="bg-white dark:bg-gray-800 rounded-xl sm:rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-4 sm:p-6">
+                  <div className="flex items-center justify-between mb-4 sm:mb-6">
+                    <h2 className="text-lg sm:text-xl font-semibold text-gray-900 dark:text-white">
                       {t('totalTasks')}
                     </h2>
-                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                    <div className="text-xs sm:text-sm text-gray-500 dark:text-gray-400">
                       {Object.keys(safeCurrentCollection.tasks).length} {Object.keys(safeCurrentCollection.tasks).length !== 1 ? t('totalTasks').toLowerCase() : t('totalTasks').toLowerCase().slice(0, -1)}
                     </div>
                   </div>
@@ -614,19 +614,26 @@ function App() {
                     onDeleteTask={handleDeleteTask}
                     aiConfig={aiConfig}
                     language={language}
+                    activeTab={activeTab}
                   />
                 </div>
               </motion.div>
             )}
           </AnimatePresence>
         </section>
-        <aside className="w-full md:w-[400px] max-w-full md:max-w-[400px] flex flex-col gap-4">
+        
+        {/* AI Chat Sidebar - Hidden on mobile for Chat tab, always visible on desktop */}
+        <aside className={`
+          w-full xl:w-[400px] max-w-full xl:max-w-[400px] flex flex-col gap-2 sm:gap-4
+          ${activeTab === 'AI Chat' ? 'hidden xl:flex' : 'hidden xl:flex'}
+        `}>
           <AdvancedAIChat
             aiConfig={aiConfig}
             taskData={taskData}
             onCreateTask={handleCreateTask}
             onUpdateTask={handleUpdateTask}
             onDeleteTask={handleDeleteTask}
+            onUpdateTaskData={setTaskData}
             language={language}
             setAiConfig={updateAiConfig}
           />

@@ -25,8 +25,8 @@ export function TabNavigation({ activeTab, onTabChange, language }: TabNavigatio
 
   return (
     <div className="w-full border-b border-gray-200 dark:border-gray-700 bg-white/50 dark:bg-gray-900/50 glass">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-        <nav className="flex space-x-1 overflow-x-auto">
+      <div className="max-w-7xl mx-auto px-2 sm:px-4 lg:px-8">
+        <nav className="flex space-x-0.5 sm:space-x-1 overflow-x-auto scrollbar-hide pb-0">
           {tabs.map((tab) => {
             const Icon = tab.icon;
             const isActive = activeTab === tab.id;
@@ -36,8 +36,10 @@ export function TabNavigation({ activeTab, onTabChange, language }: TabNavigatio
                 key={tab.id}
                 onClick={() => onTabChange(tab.id)}
                 className={`
-                  relative flex items-center space-x-2 px-4 py-3 rounded-t-xl
-                  font-medium text-sm whitespace-nowrap transition-all duration-200
+                  relative flex items-center justify-center sm:justify-start space-x-1 sm:space-x-2 
+                  px-2 sm:px-4 py-2 sm:py-3 rounded-t-lg sm:rounded-t-xl
+                  font-medium text-xs sm:text-sm whitespace-nowrap transition-all duration-200
+                  min-w-[60px] sm:min-w-[auto] flex-shrink-0
                   ${isActive 
                     ? 'text-primary-600 bg-white dark:bg-gray-800 shadow-sm' 
                     : 'text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-gray-200 hover:bg-gray-50 dark:hover:bg-gray-800/50'
@@ -46,8 +48,9 @@ export function TabNavigation({ activeTab, onTabChange, language }: TabNavigatio
                 whileHover={{ y: -1 }}
                 whileTap={{ scale: 0.98 }}
               >
-                <Icon className="w-4 h-4" />
-                <span>{tab.label}</span>
+                <Icon className="w-3 h-3 sm:w-4 sm:h-4 flex-shrink-0" />
+                <span className="hidden sm:inline">{tab.label}</span>
+                <span className="sm:hidden text-[10px] leading-none mt-0.5">{tab.label}</span>
                 
                 {isActive && (
                   <motion.div

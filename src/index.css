@@ -54,6 +54,27 @@ body,
   @apply bg-gray-400 dark:bg-gray-500;
 }
 
+/* Hide scrollbar utility */
+.scrollbar-hide {
+  -ms-overflow-style: none;  /* Internet Explorer 10+ */
+  scrollbar-width: none;  /* Firefox */
+}
+
+.scrollbar-hide::-webkit-scrollbar {
+  display: none;  /* Safari and Chrome */
+}
+
+/* Mobile-specific scrollbar for horizontal scroll */
+.overflow-x-auto::-webkit-scrollbar {
+  height: 2px;
+}
+
+@media (max-width: 640px) {
+  .overflow-x-auto::-webkit-scrollbar {
+    height: 0;
+  }
+}
+
 /* Glass effect utilities */
 @layer utilities {
   .glass {
@@ -174,4 +195,40 @@ body,
 /* Modal backdrop in dark mode */
 .dark .fixed.inset-0.bg-black {
   background-color: rgba(0, 0, 0, 0.7);
+}
+
+/* Mobile-specific utilities */
+@media (max-width: 640px) {
+  .mobile-card {
+    @apply rounded-lg p-3;
+  }
+  
+  .mobile-padding {
+    @apply px-3 py-2;
+  }
+  
+  .mobile-text {
+    @apply text-sm;
+  }
+}
+
+/* Touch-friendly buttons on mobile */
+@media (hover: none) and (pointer: coarse) {
+  .touch-target {
+    min-height: 44px;
+    min-width: 44px;
+  }
+}
+
+/* Improved mobile chat layout */
+@media (max-width: 1280px) {
+  .mobile-chat-full {
+    height: calc(100vh - 140px);
+  }
+}
+
+@media (max-width: 640px) {
+  .mobile-chat-full {
+    height: calc(100vh - 120px);
+  }
 }

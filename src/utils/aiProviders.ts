@@ -16,7 +16,7 @@ export interface KeyValidationResponse {
   success: boolean;
   messageKey: string;
   messageParams?: Record<string, string | number>;
-  data?: any;
+  data?: string | string[] | Record<string, unknown>;
 }
 
 export interface ModelPricing {
@@ -826,7 +826,7 @@ async function handleAPIError(response: Response, provider: string): Promise<str
   }
 }
 
-function calculateCost(usage: any, model: string, provider: string): number | undefined {
+function calculateCost(usage: Record<string, number> | undefined, model: string, provider: string): number | undefined {
   const providerConfig = AI_PROVIDERS[provider as keyof typeof AI_PROVIDERS];
   if (!usage || !providerConfig?.pricing?.[model]) return undefined;
   
