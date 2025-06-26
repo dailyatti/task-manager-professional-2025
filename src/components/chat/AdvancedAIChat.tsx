@@ -11,29 +11,40 @@ import {
   Loader2,
   AlertCircle,
   CheckCircle,
-  X
+  X,
+  Shield,
+  Zap
 } from 'lucide-react';
 import { Button } from '../ui/Button';
 import { Input } from '../ui/Input';
 import { useTranslation } from '../../utils/translations';
-import type { Task, AIConfig } from '../../types';
+import type { Task, AIConfig, TaskData } from '../../types';
 import { createSmartTaskFromAI } from '../../utils/aiChatUtils';
+import { 
+  TaskManagementSystem, 
+  validateAPIConfiguration, 
+  generateFeedbackMessage,
+  type TaskDeletionResult,
+  type APIValidationResult
+} from '../../utils/taskManagement';
 
 interface AdvancedAIChatProps {
   aiConfig: AIConfig;
-  taskData: any;
+  taskData: TaskData;
   onCreateTask: (taskData: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>, category?: string, subcategory?: string) => void;
   onUpdateTask: (taskId: string, updates: Partial<Task>) => void;
   onDeleteTask: (taskId: string) => void;
+  onUpdateTaskData: (data: TaskData | ((prev: TaskData) => TaskData)) => void;
   language: string;
 }
 
 interface ChatMessage {
   id: string;
-  role: 'user' | 'assistant';
+  role: 'user' | 'assistant' | 'system';
   content: string;
   timestamp: Date;
   isLoading?: boolean;
+  type?: 'success' | 'error' | 'warning' | 'info';
 }
 
 export function AdvancedAIChat({
@@ -42,6 +53,7 @@ export function AdvancedAIChat({
   onCreateTask,
   onUpdateTask,
   onDeleteTask,
+  onUpdateTaskData,
   language,
   setAiConfig
 }: AdvancedAIChatProps & { setAiConfig?: (config: Partial<AIConfig>) => void }) {
@@ -54,6 +66,11 @@ export function AdvancedAIChat({
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const [apiKeyInput, setApiKeyInput] = useState(aiConfig.apiKey || '');
   const [modelInput, setModelInput] = useState(aiConfig.model || 'gpt-4o');
+  const [isValidating, setIsValidating] = useState(false);
+  const [validationResult, setValidationResult] = useState<APIValidationResult | null>(null);
+
+  // Initialize task management system
+  const taskManager = new TaskManagementSystem(taskData, onUpdateTaskData);
 
   // Auto-scroll to bottom when new messages arrive
   useEffect(() => {
@@ -67,10 +84,112 @@ export function AdvancedAIChat({
         id: 'welcome',
         role: 'assistant',
         content: t('chatWelcome'),
-        timestamp: new Date()
+        timestamp: new Date(),
+        type: 'info'
       }]);
     }
   }, [t, messages.length]);
+
+  // Professional API validation
+  const handleValidateAPI = async () => {
+    if (!apiKeyInput) {
+      setValidationResult({ isValid: false, error: 'API key is required' });
+      return;
+    }
+
+    setIsValidating(true);
+    setValidationResult(null);
+
+    try {
+      const config: AIConfig = {
+        ...aiConfig,
+        apiKey: apiKeyInput,
+        model: modelInput
+      };
+
+      const result = await validateAPIConfiguration(config);
+      setValidationResult(result);
+
+      const feedbackMessage = generateFeedbackMessage('validate', result, language);
+      
+      setMessages(prev => [...prev, {
+        id: Date.now().toString(),
+        role: 'system',
+        content: feedbackMessage,
+        timestamp: new Date(),
+        type: result.isValid ? 'success' : 'error'
+      }]);
+
+      if (result.isValid && setAiConfig) {
+        setAiConfig({ 
+          apiKey: apiKeyInput, 
+          model: modelInput, 
+          enabled: true 
+        });
+      }
+
+    } catch (error) {
+      const errorResult: APIValidationResult = {
+        isValid: false,
+        error: error instanceof Error ? error.message : 'Validation failed'
+      };
+      setValidationResult(errorResult);
+    } finally {
+      setIsValidating(false);
+    }
+  };
+
+  // Enhanced AI message processing with advanced task management
+  const processAICommand = async (userMessage: string): Promise<string> => {
+    const lowerMessage = userMessage.toLowerCase();
+
+    // Delete commands
+    if (lowerMessage.includes('töröl') || lowerMessage.includes('delete')) {
+      if (lowerMessage.includes('minden') || lowerMessage.includes('all')) {
+        // Delete all tasks
+        const result = await taskManager.deleteAllTasks();
+        return generateFeedbackMessage('delete', result, language);
+      } else if (lowerMessage.includes('kategória') || lowerMessage.includes('category')) {
+        // Extract category from message
+        const categoryMatch = lowerMessage.match(/(year|month|week|day|év|hónap|hét|nap)/);
+        if (categoryMatch) {
+          const category = categoryMatch[1];
+          const mappedCategory = category === 'év' ? 'Year' : 
+                                 category === 'hónap' ? 'Month' : 
+                                 category === 'hét' ? 'Week' : 
+                                 category === 'nap' ? 'Day' : category;
+          
+          const result = await taskManager.deleteAllTasksFromCategory(mappedCategory);
+          return generateFeedbackMessage('delete', result, language);
+        }
+      }
+    }
+
+    // Task creation commands
+    if (lowerMessage.includes('új feladat') || lowerMessage.includes('create task') || lowerMessage.includes('add task')) {
+      // Extract task details from message
+      const taskText = userMessage.replace(/(új feladat|create task|add task)[:.]?\s*/i, '');
+      
+      if (taskText.trim()) {
+        const taskObj: Omit<Task, 'id' | 'createdAt' | 'updatedAt'> = {
+          text: taskText,
+          time: '',
+          completed: false,
+          priority: 'medium',
+          subtasks: [],
+          collapsed: true,
+          color: '#ffffff',
+          notes: `Created by AI on ${new Date().toLocaleString()}`
+        };
+        
+        onCreateTask(taskObj, 'Day');
+        return generateFeedbackMessage('create', { success: true, message: `Task "${taskText}" created` }, language);
+      }
+    }
+
+    // Default AI response
+    return '';
+  };
 
   const handleSendMessage = async () => {
     if (!inputMessage.trim() || isLoading) return;
@@ -96,76 +215,101 @@ export function AdvancedAIChat({
     };
 
     setMessages(prev => [...prev, userMessage, loadingMessage]);
+    const currentInput = inputMessage;
     setInputMessage('');
     setIsLoading(true);
     setError(null);
 
     try {
-      const response = await fetch("https://api.openai.com/v1/chat/completions", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          Authorization: `Bearer ${aiConfig.apiKey}`
-        },
-        body: JSON.stringify({
-          model: aiConfig.model,
-          messages: [
-            {
-              role: "system",
-              content: `You are a helpful AI assistant for task management and productivity. \nThe user has tasks organized by Year, Month, Week, and Day. \nYou can help with creating, updating, and managing tasks.\nCurrent language: ${language}\nRespond in the same language as the user's message.`
-            },
-            {
-              role: "user",
-              content: inputMessage
-            }
-          ],
-          max_tokens: 500,
-          temperature: 0.7
-        }),
-      });
-
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status} ${response.statusText}`);
-      }
-
-      const data = await response.json();
-      let aiContent = data.choices && data.choices.length > 0 ? data.choices[0].message.content : '';
-
-      // --- ÚJ: Feladat automatikus felismerése és hozzáadása ---
-      // Egyszerű regex keresés: "Feladat:" vagy "Task:" kulcsszóval
-      const taskMatch = aiContent.match(/(?:Feladat|Task):(.+?)(?:\n|$)/i);
-      if (taskMatch) {
-        const taskText = taskMatch[1].trim();
-        // Próbáljuk meg a dátumot is kinyerni
-        const dateMatch = aiContent.match(/(?:Dátum|Date):\s*([0-9]{4}-[0-9]{2}-[0-9]{2})/i);
-        const timeMatch = aiContent.match(/(?:Idő|Time):\s*([0-9]{2}:[0-9]{2})/i);
-        const priorityMatch = aiContent.match(/(?:Prioritás|Priority):\s*(low|medium|high)/i);
-        const categoryMatch = aiContent.match(/(?:Kategória|Category):\s*(Year|Month|Week|Day)/i);
-        const subcategoryMatch = aiContent.match(/(?:Alkategória|Subcategory):\s*([A-Za-z0-9]+)/i);
-
-        const taskObj: Omit<Task, 'id' | 'createdAt' | 'updatedAt'> = {
-          text: taskText,
-          time: timeMatch ? timeMatch[1] : '',
-          completed: false,
-          priority: priorityMatch ? priorityMatch[1] as any : 'medium',
-          subtasks: [],
-          collapsed: true,
-          color: '#ffffff',
-          notes: aiContent
+      // First check for AI commands
+      const commandResponse = await processAICommand(currentInput);
+      
+      if (commandResponse) {
+        // Command was processed, show result
+        const commandMessage: ChatMessage = {
+          id: (Date.now() + 2).toString(),
+          role: 'system',
+          content: commandResponse,
+          timestamp: new Date(),
+          type: commandResponse.includes('✅') ? 'success' : 'error'
         };
-        const category = categoryMatch ? categoryMatch[1] : 'Day';
-        const subcategory = subcategoryMatch ? subcategoryMatch[1] : undefined;
-        onCreateTask(taskObj, category, subcategory);
+
+        setMessages(prev => prev.map(msg => msg.isLoading ? commandMessage : msg));
+      } else {
+        // Regular AI chat
+        const response = await fetch("https://api.openai.com/v1/chat/completions", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${aiConfig.apiKey}`
+          },
+          body: JSON.stringify({
+            model: aiConfig.model,
+            messages: [
+              {
+                role: "system",
+                content: `You are a professional AI assistant for task management and productivity. 
+                You can help with creating, updating, and managing tasks across Year, Month, Week, and Day categories.
+                
+                Available commands:
+                - "delete all" or "töröl minden" - Delete all tasks
+                - "delete category [name]" or "töröl kategória [név]" - Delete all tasks from a category
+                - "create task [description]" or "új feladat [leírás]" - Create a new task
+                
+                Current language: ${language}
+                Respond in the same language as the user's message.
+                Be helpful, professional, and concise.`
+              },
+              {
+                role: "user",
+                content: currentInput
+              }
+            ],
+            max_tokens: 500,
+            temperature: 0.7
+          }),
+        });
+
+        if (!response.ok) {
+          throw new Error(`API error: ${response.status} ${response.statusText}`);
+        }
+
+        const data = await response.json();
+        let aiContent = data.choices && data.choices.length > 0 ? data.choices[0].message.content : '';
+
+        // Enhanced task detection and creation
+        const taskMatch = aiContent.match(/(?:Feladat|Task):(.+?)(?:\n|$)/i);
+        if (taskMatch) {
+          const taskText = taskMatch[1].trim();
+          const priorityMatch = aiContent.match(/(?:Prioritás|Priority):\s*(low|medium|high)/i);
+          const categoryMatch = aiContent.match(/(?:Kategória|Category):\s*(Year|Month|Week|Day)/i);
+          const subcategoryMatch = aiContent.match(/(?:Alkategória|Subcategory):\s*([A-Za-z0-9]+)/i);
+
+          const taskObj: Omit<Task, 'id' | 'createdAt' | 'updatedAt'> = {
+            text: taskText,
+            time: '',
+            completed: false,
+            priority: priorityMatch ? priorityMatch[1] as any : 'medium',
+            subtasks: [],
+            collapsed: true,
+            color: '#ffffff',
+            notes: aiContent
+          };
+          
+          const category = categoryMatch ? categoryMatch[1] : 'Day';
+          const subcategory = subcategoryMatch ? subcategoryMatch[1] : undefined;
+          onCreateTask(taskObj, category, subcategory);
+        }
+
+        const assistantMessage: ChatMessage = {
+          id: (Date.now() + 2).toString(),
+          role: 'assistant',
+          content: aiContent,
+          timestamp: new Date()
+        };
+
+        setMessages(prev => prev.map(msg => msg.isLoading ? assistantMessage : msg));
       }
-
-      const assistantMessage: ChatMessage = {
-        id: (Date.now() + 2).toString(),
-        role: 'assistant',
-        content: aiContent,
-        timestamp: new Date()
-      };
-
-      setMessages(prev => prev.map(msg => msg.isLoading ? assistantMessage : msg));
     } catch (error) {
       console.error("AI Chat error:", error);
       setError(t('aiError'));
@@ -187,14 +331,15 @@ export function AdvancedAIChat({
       id: 'welcome',
       role: 'assistant',
       content: t('chatWelcome'),
-      timestamp: new Date()
+      timestamp: new Date(),
+      type: 'info'
     }]);
   };
 
   const exportChat = () => {
     const chatText = messages
       .filter(msg => !msg.isLoading)
-      .map(msg => `${msg.role === 'user' ? 'User' : 'AI'}: ${msg.content}`)
+      .map(msg => `${msg.role === 'user' ? 'User' : msg.role === 'system' ? 'System' : 'AI'}: ${msg.content}`)
       .join('\n\n');
     
     const blob = new Blob([chatText], { type: 'text/plain' });
@@ -212,12 +357,21 @@ export function AdvancedAIChat({
     setMessages(prev => prev.filter(msg => msg.id !== messageId));
   };
 
-  // --- API kulcs beállítás kezelése ---
-  const handleSaveApiKey = () => {
-    if (setAiConfig) {
-      setAiConfig({ apiKey: apiKeyInput, model: modelInput, enabled: !!apiKeyInput });
+  // Quick action buttons
+  const quickActions = [
+    {
+      label: t('deleteAllTasks'),
+      action: () => setInputMessage('töröl minden feladatot'),
+      icon: Trash2,
+      variant: 'destructive' as const
+    },
+    {
+      label: t('createDailyTask'),
+      action: () => setInputMessage('új feladat: '),
+      icon: Zap,
+      variant: 'default' as const
     }
-  };
+  ];
 
   return (
     <div className="flex flex-col h-full bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700">
@@ -228,6 +382,9 @@ export function AdvancedAIChat({
           <h2 className="text-lg font-semibold text-gray-900 dark:text-white">
             {t('aiAssistant')}
           </h2>
+          {validationResult?.isValid && (
+            <CheckCircle className="w-4 h-4 text-green-500" />
+          )}
         </div>
         
         <div className="flex items-center space-x-2">
@@ -271,7 +428,7 @@ export function AdvancedAIChat({
             exit={{ height: 0, opacity: 0 }}
             className="border-b border-gray-200 dark:border-gray-700 bg-gray-50 dark:bg-gray-700"
           >
-            <div className="p-4 space-y-3">
+            <div className="p-4 space-y-4">
               <div>
                 <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
                   {t('aiModel')}
@@ -301,10 +458,66 @@ export function AdvancedAIChat({
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={handleSaveApiKey}
+                    onClick={handleValidateAPI}
+                    disabled={isValidating || !apiKeyInput}
+                    className="min-w-[100px]"
                   >
-                    {t('save')}
+                    {isValidating ? (
+                      <Loader2 className="w-4 h-4 animate-spin" />
+                    ) : (
+                      <>
+                        <Shield className="w-4 h-4 mr-1" />
+                        {t('validate')}
+                      </>
+                    )}
                   </Button>
+                </div>
+              </div>
+
+              {/* Validation Result */}
+              {validationResult && (
+                <div className={`p-3 rounded-lg border ${
+                  validationResult.isValid 
+                    ? 'bg-green-50 dark:bg-green-900/20 border-green-200 dark:border-green-800' 
+                    : 'bg-red-50 dark:bg-red-900/20 border-red-200 dark:border-red-800'
+                }`}>
+                  <div className="flex items-center space-x-2">
+                    {validationResult.isValid ? (
+                      <CheckCircle className="w-4 h-4 text-green-500" />
+                    ) : (
+                      <AlertCircle className="w-4 h-4 text-red-500" />
+                    )}
+                    <span className={`text-sm ${
+                      validationResult.isValid 
+                        ? 'text-green-700 dark:text-green-300' 
+                        : 'text-red-700 dark:text-red-300'
+                    }`}>
+                      {validationResult.isValid 
+                        ? `✅ API Valid (${validationResult.model})` 
+                        : `❌ ${validationResult.error}`}
+                    </span>
+                  </div>
+                </div>
+              )}
+
+              {/* Quick Actions */}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-2">
+                  {t('quickActions')}
+                </label>
+                <div className="flex gap-2">
+                  {quickActions.map((action, index) => (
+                    <Button
+                      key={index}
+                      variant={action.variant}
+                      size="sm"
+                      onClick={action.action}
+                      className="flex items-center space-x-1"
+                    >
+                      <action.icon className="w-3 h-3" />
+                      <span className="text-xs">{action.label}</span>
+                    </Button>
+                  ))}
                 </div>
               </div>
             </div>
@@ -327,10 +540,14 @@ export function AdvancedAIChat({
                 <div className={`flex-shrink-0 w-8 h-8 rounded-full flex items-center justify-center ${
                   message.role === 'user' 
                     ? 'bg-primary-600 text-white' 
+                    : message.role === 'system'
+                    ? 'bg-orange-500 text-white'
                     : 'bg-gray-200 dark:bg-gray-600 text-gray-700 dark:text-gray-300'
                 }`}>
                   {message.role === 'user' ? (
                     <User className="w-4 h-4" />
+                  ) : message.role === 'system' ? (
+                    <Shield className="w-4 h-4" />
                   ) : (
                     <Bot className="w-4 h-4" />
                   )}
@@ -339,6 +556,12 @@ export function AdvancedAIChat({
                 <div className={`flex-1 p-3 rounded-lg ${
                   message.role === 'user'
                     ? 'bg-primary-600 text-white'
+                    : message.role === 'system'
+                    ? message.type === 'success' 
+                      ? 'bg-green-100 dark:bg-green-900/30 text-green-800 dark:text-green-200'
+                      : message.type === 'error'
+                      ? 'bg-red-100 dark:bg-red-900/30 text-red-800 dark:text-red-200'
+                      : 'bg-orange-100 dark:bg-orange-900/30 text-orange-800 dark:text-orange-200'
                     : 'bg-gray-100 dark:bg-gray-700 text-gray-900 dark:text-white'
                 }`}>
                   {message.isLoading ? (
@@ -351,7 +574,7 @@ export function AdvancedAIChat({
                       <p className="whitespace-pre-wrap">{message.content}</p>
                       <div className="flex items-center justify-between text-xs opacity-70">
                         <span>{message.timestamp.toLocaleTimeString()}</span>
-                        {message.role === 'assistant' && message.id !== 'welcome' && (
+                        {message.role !== 'user' && message.id !== 'welcome' && (
                           <Button
                             variant="ghost"
                             size="sm"

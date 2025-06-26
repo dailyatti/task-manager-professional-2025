@@ -498,23 +498,22 @@ function App() {
               </motion.div>
             ) : activeTab === 'AI Chat' ? (
               <motion.div
-                key="chat"
+                key="ai-chat"
                 initial={{ opacity: 0, y: 20 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -20 }}
                 className="h-full"
               >
-                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 h-[calc(100vh-200px)]">
-                  <AdvancedAIChat
-                    aiConfig={aiConfig}
-                    taskData={taskData}
-                    onCreateTask={handleCreateTask}
-                    onUpdateTask={handleUpdateTask}
-                    onDeleteTask={handleDeleteTask}
-                    language={language}
-                    setAiConfig={updateAiConfig}
-                  />
-                </div>
+                <AdvancedAIChat
+                  aiConfig={aiConfig}
+                  taskData={taskData}
+                  onCreateTask={handleCreateTask}
+                  onUpdateTask={handleUpdateTask}
+                  onDeleteTask={handleDeleteTask}
+                  onUpdateTaskData={setTaskData}
+                  language={language}
+                  setAiConfig={updateAiConfig}
+                />
               </motion.div>
             ) : activeTab === 'Notes' ? (
               <motion.div
