@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { 
   ChevronDown, 
@@ -29,6 +29,8 @@ interface TaskItemProps {
   onToggleSubtask: (subtaskId: string) => void;
   aiEnabled: boolean;
   language: string;
+  activeTab: string;
+  taskDate: string | null;
 }
 
 const priorityStyles = {
@@ -52,13 +54,63 @@ export function TaskItem({
   onDeleteSubtask, 
   onToggleSubtask,
   aiEnabled,
-  language
+  language,
+  activeTab,
+  taskDate
 }: TaskItemProps) {
   const { t } = useTranslation(language);
   const [isEditing, setIsEditing] = useState(false);
   const [editText, setEditText] = useState(task.text);
   const [newSubtaskText, setNewSubtaskText] = useState('');
   const [showColorPicker, setShowColorPicker] = useState(false);
+  const [isDue, setIsDue] = useState(false);
+  const [highlight, setHighlight] = useState<'none' | 'yellow' | 'red'>('none');
+
+  useEffect(() => {
+    if (!task.time) return;
+    const checkDue = () => {
+      const now = new Date();
+      const [taskHour, taskMinute] = task.time.split(':').map(Number);
+      if (isNaN(taskHour) || isNaN(taskMinute)) return setIsDue(false);
+      const nowMinutes = now.getHours() * 60 + now.getMinutes();
+      const taskMinutes = taskHour * 60 + taskMinute;
+      setIsDue(nowMinutes >= taskMinutes);
+    };
+    checkDue();
+    const interval = setInterval(checkDue, 1000);
+    return () => clearInterval(interval);
+  }, [task.time]);
+
+  useEffect(() => {
+    const checkHighlight = () => {
+      if (activeTab === 'Day' && task.time) {
+        // Óra-perc pontos kiemelés
+        const now = new Date();
+        const [taskHour, taskMinute] = task.time.split(':').map(Number);
+        if (isNaN(taskHour) || isNaN(taskMinute)) return setHighlight('none');
+        const nowMinutes = now.getHours() * 60 + now.getMinutes();
+        const taskMinutes = taskHour * 60 + taskMinute;
+        if (nowMinutes === taskMinutes) setHighlight('yellow');
+        else if (nowMinutes > taskMinutes) setHighlight('red');
+        else setHighlight('none');
+      } else if (taskDate) {
+        // Dátum alapú kiemelés (hét, hónap, év nézet)
+        const today = new Date();
+        const taskD = new Date(taskDate);
+        // Csak év/hónap/napot hasonlítunk
+        const todayStr = today.toISOString().split('T')[0];
+        const taskStr = taskD.toISOString().split('T')[0];
+        if (taskStr === todayStr) setHighlight('yellow');
+        else if (taskD < today) setHighlight('red');
+        else setHighlight('none');
+      } else {
+        setHighlight('none');
+      }
+    };
+    checkHighlight();
+    const interval = setInterval(checkHighlight, 1000);
+    return () => clearInterval(interval);
+  }, [activeTab, task.time, taskDate]);
 
   const handleSaveEdit = () => {
     if (editText.trim()) {
@@ -99,6 +151,10 @@ export function TaskItem({
         shadow-sm hover:shadow-md transition-all duration-200
         ${priorityStyles[task.priority]}
         ${task.completed ? 'opacity-75' : ''}
+        ${isDue ? 'bg-red-500 text-white border-red-700' : ''}
+        ${highlight === 'yellow' ? 'bg-yellow-400 text-black border-yellow-600' : ''}
+        ${highlight === 'red' ? 'bg-red-500 text-white border-red-700' : ''}
+        ${highlight === 'none' ? 'bg-white dark:bg-gray-800 border-gray-200 dark:border-gray-700' : ''}
       `}
       style={{ backgroundColor: task.color !== '#ffffff' ? task.color + '20' : undefined }}
     >

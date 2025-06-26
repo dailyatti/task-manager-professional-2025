@@ -12,6 +12,7 @@ import { Input } from '../ui/Input';
 import { Textarea } from '../ui/Textarea';
 import { useTranslation } from '../../utils/translations';
 import type { Task, TaskData, Priority } from '../../types';
+import { Clock as ClockComponent } from '../ui/Clock';
 
 interface CalendarViewProps {
   taskData: TaskData;
@@ -19,6 +20,7 @@ interface CalendarViewProps {
   onDeleteTask: (taskId: string) => void;
   onCreateTask: (task: Omit<Task, 'id' | 'createdAt' | 'updatedAt'>) => void;
   language: string;
+  activeTab: string;
 }
 
 interface CalendarEvent {
@@ -38,7 +40,7 @@ interface CalendarEvent {
   };
 }
 
-export function CalendarView({ taskData, onUpdateTask, onDeleteTask, onCreateTask, language }: CalendarViewProps) {
+export function CalendarView({ taskData, onUpdateTask, onDeleteTask, onCreateTask, language, activeTab }: CalendarViewProps) {
   const { t } = useTranslation(language);
   const [selectedEvent, setSelectedEvent] = useState<CalendarEvent | null>(null);
   const [showTaskModal, setShowTaskModal] = useState(false);
@@ -711,6 +713,10 @@ export function CalendarView({ taskData, onUpdateTask, onDeleteTask, onCreateTas
           </div>
         </div>
       </Modal>
+
+      {activeTab === 'Day' && (
+        <ClockComponent language={language} />
+      )}
     </motion.div>
   );
 }

@@ -1,7 +1,7 @@
 import React from 'react';
 import { motion, AnimatePresence } from 'framer-motion';
 import { TaskItem } from './TaskItem';
-import { createNewSubtask } from '../../utils/taskUtils';
+import { createNewSubtask, getTaskDateForView } from '../../utils/taskUtils';
 import { generateWithAI } from '../../utils/aiProviders';
 import { useTranslation } from '../../utils/translations';
 import type { Task, AIConfig } from '../../types';
@@ -12,9 +12,10 @@ interface TaskListProps {
   onDeleteTask: (taskId: string) => void;
   aiConfig: AIConfig;
   language: string;
+  activeTab: string;
 }
 
-export function TaskList({ tasks, onUpdateTask, onDeleteTask, aiConfig, language }: TaskListProps) {
+export function TaskList({ tasks, onUpdateTask, onDeleteTask, aiConfig, language, activeTab }: TaskListProps) {
   const { t } = useTranslation(language);
   const taskList = Object.entries(tasks).sort((a, b) => {
     // Sort by priority (high -> medium -> low), then by creation time
@@ -115,6 +116,8 @@ export function TaskList({ tasks, onUpdateTask, onDeleteTask, aiConfig, language
             onToggleSubtask={(subtaskId) => handleToggleSubtask(taskId, subtaskId)}
             aiEnabled={aiConfig.enabled}
             language={language}
+            activeTab={activeTab}
+            taskDate={getTaskDateForView(task, activeTab)}
           />
         ))}
       </AnimatePresence>

@@ -10,7 +10,7 @@ import { AIConfigPanel } from './components/ai/AIConfigPanel';
 import { ImportExportPanel } from './components/import/ImportExportPanel';
 import { GoogleCalendarPanel } from './components/calendar/GoogleCalendarPanel';
 import { CalendarView } from './components/calendar/CalendarView';
-import { AIChatPanel } from './components/chat/AIChatPanel';
+import { AdvancedAIChat } from './components/chat/AdvancedAIChat';
 import { useLocalStorage } from './hooks/useLocalStorage';
 import { useLanguage } from './hooks/useLanguage';
 import { getTranslations } from './utils/translations';
@@ -72,6 +72,11 @@ function App() {
     model: 'gpt-4o',
     enabled: false,
   });
+
+  // Wrapper a Partial<AIConfig> támogatásához
+  const updateAiConfig = (config: Partial<AIConfig>) => {
+    setAiConfig(prev => ({ ...prev, ...config }));
+  };
 
   // Google Calendar Configuration
   const [calendarConfig, setCalendarConfig] = useLocalStorage<GoogleCalendarConfig>('calendarConfig', {
@@ -415,7 +420,7 @@ function App() {
   const subTabs = activeTab === 'Month' ? getTranslations(language).months : activeTab === 'Week' ? getTranslations(language).weekdays : [];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-gray-50 to-gray-100 dark:from-gray-900 dark:to-gray-950">
+    <div className="min-h-screen flex flex-col bg-gray-50 dark:bg-gray-900">
       <Header 
         stats={stats} 
         onSettingsClick={() => setShowSettings(!showSettings)}
@@ -433,185 +438,200 @@ function App() {
         />
       )}
 
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <AnimatePresence mode="wait">
-          {showSettings ? (
-            <motion.div
-              key="settings"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="space-y-8"
-            >
-              <div className="text-center mb-8">
-                <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
-                  {t('settings')} & {t('configuration')}
-                </h2>
-                <p className="text-gray-600 dark:text-gray-400">
-                  {t('configureAiProviders')}
-                </p>
-              </div>
-
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-                <AIConfigPanel
-                  config={aiConfig}
-                  onSave={setAiConfig}
-                  t={(key: string) => t(key as StringTranslationKey)}
-                />
-                
-                <ImportExportPanel
-                  taskData={taskData}
-                  onImport={handleImportData}
-                  language={language}
-                />
-                
-                <div className="lg:col-span-2">
-                                  <GoogleCalendarPanel
-                  config={calendarConfig}
-                  onConfigChange={setCalendarConfig}
-                />
+      <main className="flex-1 flex flex-col md:flex-row gap-4 p-4">
+        <section className="flex-1">
+          <AnimatePresence mode="wait">
+            {showSettings ? (
+              <motion.div
+                key="settings"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="space-y-8"
+              >
+                <div className="text-center mb-8">
+                  <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                    {t('settings')} & {t('configuration')}
+                  </h2>
+                  <p className="text-gray-600 dark:text-gray-400">
+                    {t('configureAiProviders')}
+                  </p>
                 </div>
-              </div>
-            </motion.div>
-          ) : activeTab === 'Calendar' ? (
-            <motion.div
-              key="calendar"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="h-full"
-            >
-              <CalendarView
-                taskData={taskData}
-                onUpdateTask={handleUpdateTask}
-                onDeleteTask={handleDeleteTask}
-                onCreateTask={handleCreateTask}
-                language={language}
-              />
-            </motion.div>
-          ) : activeTab === 'AI Chat' ? (
-            <motion.div
-              key="chat"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="h-full"
-            >
-              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 h-[calc(100vh-200px)]">
-                <AIChatPanel
-                  aiConfig={aiConfig}
+
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  <AIConfigPanel
+                    config={aiConfig}
+                    onSave={setAiConfig}
+                    t={(key: string) => t(key as StringTranslationKey)}
+                  />
+                  
+                  <ImportExportPanel
+                    taskData={taskData}
+                    onImport={handleImportData}
+                    language={language}
+                  />
+                  
+                  <div className="lg:col-span-2">
+                    <GoogleCalendarPanel
+                      config={calendarConfig}
+                      onConfigChange={setCalendarConfig}
+                    />
+                  </div>
+                </div>
+              </motion.div>
+            ) : activeTab === 'Calendar' ? (
+              <motion.div
+                key="calendar"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="h-full"
+              >
+                <CalendarView
                   taskData={taskData}
-                  onCreateTask={handleCreateTask}
                   onUpdateTask={handleUpdateTask}
                   onDeleteTask={handleDeleteTask}
+                  onCreateTask={handleCreateTask}
+                  language={language}
+                  activeTab={activeTab}
+                />
+              </motion.div>
+            ) : activeTab === 'AI Chat' ? (
+              <motion.div
+                key="chat"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="h-full"
+              >
+                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 h-[calc(100vh-200px)]">
+                  <AdvancedAIChat
+                    aiConfig={aiConfig}
+                    taskData={taskData}
+                    onCreateTask={handleCreateTask}
+                    onUpdateTask={handleUpdateTask}
+                    onDeleteTask={handleDeleteTask}
+                    language={language}
+                    setAiConfig={updateAiConfig}
+                  />
+                </div>
+              </motion.div>
+            ) : activeTab === 'Notes' ? (
+              <motion.div
+                key="notes"
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="h-full"
+              >
+                <NotesManager
+                  notes={taskData.Notes}
+                  onCreateNote={handleCreateNote}
+                  onUpdateNote={handleUpdateNote}
+                  onDeleteNote={handleDeleteNote}
+                  aiConfig={aiConfig}
                   language={language}
                 />
-              </div>
-            </motion.div>
-          ) : activeTab === 'Notes' ? (
-            <motion.div
-              key="notes"
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="h-full"
-            >
-              <NotesManager
-                notes={taskData.Notes}
-                onCreateNote={handleCreateNote}
-                onUpdateNote={handleUpdateNote}
-                onDeleteNote={handleDeleteNote}
-                aiConfig={aiConfig}
-                language={language}
-              />
-            </motion.div>
-          ) : (
-            <motion.div
-              key={`${activeTab}-${activeSubTab}`}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              exit={{ opacity: 0, y: -20 }}
-              className="space-y-8"
-            >
-              {/* AI Error Display */}
-              {aiError && (
-                <motion.div
-                  initial={{ opacity: 0, scale: 0.95 }}
-                  animate={{ opacity: 1, scale: 1 }}
-                  className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4"
-                >
-                  <div className="flex items-start space-x-3">
-                    <div className="flex-shrink-0">
-                      <svg className="w-5 h-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
-                      </svg>
-                    </div>
-                    <div className="flex-1">
-                      <h3 className="text-sm font-medium text-red-800 dark:text-red-200">
-                        {t('aiError')}
-                      </h3>
-                      <p className="mt-1 text-sm text-red-700 dark:text-red-300">
-                        {aiError}
-                      </p>
+              </motion.div>
+            ) : (
+              <motion.div
+                key={`${activeTab}-${activeSubTab}`}
+                initial={{ opacity: 0, y: 20 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -20 }}
+                className="space-y-8"
+              >
+                {/* AI Error Display */}
+                {aiError && (
+                  <motion.div
+                    initial={{ opacity: 0, scale: 0.95 }}
+                    animate={{ opacity: 1, scale: 1 }}
+                    className="bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 rounded-xl p-4"
+                  >
+                    <div className="flex items-start space-x-3">
+                      <div className="flex-shrink-0">
+                        <svg className="w-5 h-5 text-red-400" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clipRule="evenodd" />
+                        </svg>
+                      </div>
+                      <div className="flex-1">
+                        <h3 className="text-sm font-medium text-red-800 dark:text-red-200">
+                          {t('aiError')}
+                        </h3>
+                        <p className="mt-1 text-sm text-red-700 dark:text-red-300">
+                          {aiError}
+                        </p>
+                        <button
+                          onClick={() => setShowSettings(true)}
+                          className="mt-2 text-sm text-red-600 dark:text-red-400 hover:text-red-500 dark:hover:text-red-300 underline"
+                        >
+                          {t('aiConfigurePrompt')}
+                        </button>
+                      </div>
                       <button
-                        onClick={() => setShowSettings(true)}
-                        className="mt-2 text-sm text-red-600 dark:text-red-400 hover:text-red-500 dark:hover:text-red-300 underline"
+                        onClick={() => setAiError(null)}
+                        className="flex-shrink-0 text-red-400 hover:text-red-500"
                       >
-                        {t('aiConfigurePrompt')}
+                        <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
+                          <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
+                        </svg>
                       </button>
                     </div>
-                    <button
-                      onClick={() => setAiError(null)}
-                      className="flex-shrink-0 text-red-400 hover:text-red-500"
-                    >
-                      <svg className="w-4 h-4" fill="currentColor" viewBox="0 0 20 20">
-                        <path fillRule="evenodd" d="M4.293 4.293a1 1 0 011.414 0L10 8.586l4.293-4.293a1 1 0 111.414 1.414L11.414 10l4.293 4.293a1 1 0 01-1.414 1.414L10 11.414l-4.293 4.293a1 1 0 01-1.414-1.414L8.586 10 4.293 5.707a1 1 0 010-1.414z" clipRule="evenodd" />
-                      </svg>
-                    </button>
-                  </div>
-                </motion.div>
-              )}
+                  </motion.div>
+                )}
 
-              {/* Task Input Section */}
-              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-                <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
-                  {getTabTitle()}
-                </h2>
-                
-                <TaskInput
-                  value={safeCurrentCollection.text}
-                  onChange={handleInputChange}
-                  onGenerateTasks={handleGenerateTasks}
-                  onAddManualTask={handleAddManualTask}
-                  isGenerating={isGenerating}
-                  placeholder={getPlaceholderText()}
-                  aiEnabled={aiConfig.enabled}
-                  language={language}
-                />
-              </div>
-
-              {/* Task List Section */}
-              <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
-                    {t('totalTasks')}
+                {/* Task Input Section */}
+                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                  <h2 className="text-xl font-semibold text-gray-900 dark:text-white mb-6">
+                    {getTabTitle()}
                   </h2>
-                  <div className="text-sm text-gray-500 dark:text-gray-400">
-                    {Object.keys(safeCurrentCollection.tasks).length} {Object.keys(safeCurrentCollection.tasks).length !== 1 ? t('totalTasks').toLowerCase() : t('totalTasks').toLowerCase().slice(0, -1)}
-                  </div>
+                  
+                  <TaskInput
+                    value={safeCurrentCollection.text}
+                    onChange={handleInputChange}
+                    onGenerateTasks={handleGenerateTasks}
+                    onAddManualTask={handleAddManualTask}
+                    isGenerating={isGenerating}
+                    placeholder={getPlaceholderText()}
+                    aiEnabled={aiConfig.enabled}
+                    language={language}
+                  />
                 </div>
-                
-                <TaskList
-                  tasks={safeCurrentCollection.tasks}
-                  onUpdateTask={handleUpdateTask}
-                  onDeleteTask={handleDeleteTask}
-                  aiConfig={aiConfig}
-                  language={language}
-                />
-              </div>
-            </motion.div>
-          )}
-        </AnimatePresence>
+
+                {/* Task List Section */}
+                <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-700 p-6">
+                  <div className="flex items-center justify-between mb-6">
+                    <h2 className="text-xl font-semibold text-gray-900 dark:text-white">
+                      {t('totalTasks')}
+                    </h2>
+                    <div className="text-sm text-gray-500 dark:text-gray-400">
+                      {Object.keys(safeCurrentCollection.tasks).length} {Object.keys(safeCurrentCollection.tasks).length !== 1 ? t('totalTasks').toLowerCase() : t('totalTasks').toLowerCase().slice(0, -1)}
+                    </div>
+                  </div>
+                  
+                  <TaskList
+                    tasks={safeCurrentCollection.tasks}
+                    onUpdateTask={handleUpdateTask}
+                    onDeleteTask={handleDeleteTask}
+                    aiConfig={aiConfig}
+                    language={language}
+                  />
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </section>
+        <aside className="w-full md:w-[400px] max-w-full md:max-w-[400px] flex flex-col gap-4">
+          <AdvancedAIChat
+            aiConfig={aiConfig}
+            taskData={taskData}
+            onCreateTask={handleCreateTask}
+            onUpdateTask={handleUpdateTask}
+            onDeleteTask={handleDeleteTask}
+            language={language}
+            setAiConfig={updateAiConfig}
+          />
+        </aside>
       </main>
     </div>
   );

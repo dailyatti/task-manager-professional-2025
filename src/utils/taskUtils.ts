@@ -209,3 +209,24 @@ export function createTask(text: string, priority: Priority = 'medium'): Task {
     updatedAt: new Date().toISOString(),
   };
 }
+
+export function getTaskDateForView(task: Task, activeTab: string): string | null {
+  // Nap nézetben a mai nap
+  if (activeTab === 'Day') {
+    return new Date().toISOString().split('T')[0];
+  }
+  // Ha van time, akkor a createdAt dátum + time
+  if (task.time) {
+    const date = new Date(task.createdAt);
+    const [h, m] = task.time.split(':');
+    if (!isNaN(Number(h)) && !isNaN(Number(m))) {
+      date.setHours(Number(h));
+      date.setMinutes(Number(m));
+      date.setSeconds(0);
+      date.setMilliseconds(0);
+    }
+    return date.toISOString().split('T')[0];
+  }
+  // Egyébként a createdAt napja
+  return task.createdAt ? new Date(task.createdAt).toISOString().split('T')[0] : null;
+}

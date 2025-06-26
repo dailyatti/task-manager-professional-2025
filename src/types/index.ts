@@ -24,11 +24,13 @@ export interface Subtask {
 }
 
 export interface Note {
-  id:string;
+  id: string;
   title: string;
   content: string;
   plan?: string;
   tags: string[];
+  favorite?: boolean;
+  archived?: boolean;
   createdAt: string;
   updatedAt: string;
 }
